@@ -1,0 +1,195 @@
+<!-- 
+	This is the stylesheet provided by jQuery
+	You can navigate to the URL (without the leading "//") and download the sheet, then modify it
+	Check out things like fonts, background colors, background images, etc. Super customizable!
+-->
+<link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+
+<style>
+	/*
+		Note that jQuery will hide all `select` elements and replace them with more customizable span/divs
+		I usually hide them manually in the CSS, since jQuery won't hide them until the page loads
+		(and I don't like seeing the ugly dropdowns flash on page load)
+	*/
+	select{
+		display: none;
+	}
+	/*
+		Just some placeholder CSS so this page doesn't look TOO awful.
+	*/
+	div.boilerplateText, .ui-selectmenu-button{
+		float: left;
+		font-family: Arial;
+		font-size: 18px;
+		font-weight: bold;
+		margin-left: 10px;
+	}
+	div.boilerplateText{
+		padding-top: 8px;
+	}
+</style>
+
+
+<main>
+	<!-- 
+		A simple dropdown. Note that the `value` property (AL, AK, AR) is what is going
+		to be used in your JavaScript (see below). The text inside the `option` tag 
+		(Alabama, Alaska, Arizona) is what is actually displayed, and it can be whatever you like.
+	-->
+	<select id = "stateMenu">
+		<option value = "AL">Alabama</option>
+		<option value = "AK">Alaska</option>
+		<option value = "AR">Arizona</option>
+	</select>
+
+	<div class = "boilerplateText"> ranks number <span id = "rankLabel">2</span></div>
+
+	<div class = "boilerplateText">in</div>
+
+
+	<select id = "categoryMenu">
+		<option value = "health">Health</option>
+		<option value = "income">Income</option>
+		<option value = "education">Education</option>
+	</select>
+
+</main>
+
+<!-- 
+	I made this as a non-Svelte page, just because it's what I'm used to.
+	Note that unlike in the Svelte apps, simple html pages like this want
+	the `script` tags to be at the bottom (not the top) of the document
+-->
+<!--
+	jQuery, a library that does a variety things, including DOM manipulation.
+	
+	Note: jQuery refers to itself as `$`, so in the same way you might call `d3.method()`
+	for d3 functions you call `$.method()` for jQuery functions). If you want to use Svelte,
+	then JS might get confused about also using `$` for `$:` declarations. Here's a
+	stackoverflow thread of resolving this!
+	
+	https://stackoverflow.com/questions/58219453/how-do-i-use-jquery-in-svelte
+-->
+<script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+
+<!--
+	jQuery-UI is a separate plugin to jQuery, which we're using to create `selectmenu`
+	elements. Check out the docs for selectmenu, here:
+	
+	https://jqueryui.com/selectmenu/
+
+	Lots of other cool elements available here as well!
+-->
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+
+<script>
+	/*
+		Some dummy data. If you have a CSV document with column headers `state`,
+		`incomeRank`, and `educationRank`, then d3 will read it in to this format.
+		Check out the d3 docs for more info
+
+		https://github.com/d3/d3-dsv
+
+		Note: some front end developers will tell you that it's not a best practice
+		to include both jQuery and d3 in a single project, since they do similar things
+		(DOM manipulation). While that's true for production-level sites, I think it's
+		100% fine to use both here.
+	*/
+	data = [
+			{"state": "AL", "healthRank" : 2, "incomeRank": 1, "educationRank": 3},
+			{"state": "AK", "healthRank" : 1, "incomeRank": 2, "educationRank": 2},
+			{"state": "AR", "healthRank" : 3, "incomeRank": 3, "educationRank": 1}
+		]
+
+	/*
+		This code does two things:
+		1.	the call to `selectmenu` creates the UI element (i.e. hides the `select`
+			element and creates the styled divs/spans which work like a dropdown)
+		2.	the `change` event handler does something when the value of the menu changes
+			(see the docs linked above for more useful methods)
+	*/
+	$("#stateMenu").selectmenu({
+  		change: function( event, ui ) {
+  			// you can remove this, just a reminder to console.log early and often
+  			console.log("selected state is", ui.item.value)
+  			// see the functions below!
+  			displayRank(getRank(ui.item.value,getCategory()))
+  		}
+	});
+
+	/*
+		Similar code to the stateMenu above. Note that this doesn't follow the 
+		rule we chatted about yesterday, of "do not copy/paste". In theory, you
+		could make this into a Svelte component. I think it's simple enough that
+		there's probably no need, but could be good practice.
+	*/
+	$("#categoryMenu").selectmenu({
+  		change: function( event, ui ) {
+  			console.log("selected category is", ui.item.value)
+  			displayRank(getRank(getState(), ui.item.value))
+  		}
+	});
+
+	/*
+		Given a state abbreviation and a category name, return the relevant rank
+	*/
+	function getRank(state, category){
+		/*
+			I wrote this in one line, but to break it down:
+			1. 	data.filter is a JS built in function which takes an array and returns
+				a filtered copy of it, based on certain criteria.
+				See more info here:
+
+				https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
+
+				Note that MDN is a great resource for JS, HTML, and CSS documentation (for vanilla JS)
+
+			2.	Filter works by looking at every element in an array, and seeing if it matches your criteria.
+				So an identical way to write this would be:
+
+				let stateDatum = data.filter(function(s){
+					return s.state == state
+				})[0]
+
+				We're checking if the `state` property of each datum in the array is equal to the `state`
+				variable that was passed as a parameter to `getRank()`
+			3. 	Since `filter` returns an array (in this case an array of length 1), we need to grab the first
+				element of the array, hence the `[0]`
+		*/
+		let stateDatum = data.filter(s => s.state == state)[0]
+		/*
+			Once we've grabbed the datum, use the `category` variable which was passed in
+			as a string to get the relevant rank. So if category is "health", we return
+			stateDatum["healthRank"].
+
+			Could have this whole function in one line as
+			`return data.filter(s => s.state == state)[0][category + "Rank"]`
+			but I thought that wasn't the nicest looking
+		*/ 
+		return stateDatum[category + "Rank"]
+	}
+	/*
+		Two `getter` functions. When you call `getRank`, you need two values
+		(`state` and `category`). One of those two values will be provided
+		within the event handler for the related dropdown menu, but you'll
+		need to grab the other value from the current status of the other dropdown
+	*/
+	function getCategory(){
+		return $("#categoryMenu").val()
+	}
+
+	function getState(){
+		return $("#stateMenu").val()
+	}
+
+	/*
+		Use jQuery to change the text inside the `rankLabel` span
+		I believe your prototype had "1st" "2nd" "3rd" etc text, which
+		you can handle the logic for in this function if you'd like
+	*/
+	function displayRank(rank){
+		$("#rankLabel").text(rank)
+	}
+
+</script>
